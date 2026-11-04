@@ -30,7 +30,7 @@ For Android, install the Android SDK/JDK and run `flutter run` with an emulator 
 
 ## Try the demo
 
-Open **Household → Load demo household → Confirm**. This replaces local demo data. Choose the acting roommate in Household, then use Chores or My Responsibilities. See [demo walkthrough](docs/DEMO.md) and [task checklist](docs/TASK_CHECKLIST.md).
+Open **Household → Load demo household → Confirm**. This replaces local demo data. Choose the acting roommate in Household, then use Chores or My Responsibilities. See [demo walkthrough](docs/DEMO.md), [task checklist](docs/TASK_CHECKLIST.md), and [validation record](docs/VALIDATION.md).
 
 ## Schedule rules
 

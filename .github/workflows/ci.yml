@@ -43,6 +43,8 @@ jobs:
 
       - run: flutter test
 
+      - run: flutter build web --release
+
       # Release signing uses debug keys for now; store signing is Project 6.
       - run: flutter build apk --release
 

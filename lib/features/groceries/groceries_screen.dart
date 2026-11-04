@@ -8,7 +8,14 @@ class GroceriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Groceries')),
-      body: const Center(child: Text('Grocery list: coming in card 3.1')),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Grocery sharing is planned for a future release.\nThis demo focuses on household chores.',
+          ),
+        ),
+      ),
     );
   }
 }

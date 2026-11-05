@@ -1,28 +1,28 @@
 # Validation record
 
-Checked November 4, 2026 using Flutter 3.47.2 / Dart 3.13.2.
+Milestone 3 checked November 5, 2026 using Flutter 3.47.7 / Dart 3.13.5. Earlier artifact checks were performed November 4, 2026 using Flutter 3.47.2 / Dart 3.13.2.
 
 ## Passed locally
 
 - `dart format --output=none --set-exit-if-changed .`: 14 Dart files, no changes.
 - `flutter analyze`: no issues.
-- `flutter test`: 30 passed. One optional capture test is skipped unless its output/font environment variables are provided.
+- `flutter test`: 37 passed. One optional capture test is skipped unless its output/font environment variables are provided.
 - Optional capture test with real fonts: passed, produced seven screenshots of the running widget tree and verified the demonstrated rotation.
 - `flutter build web --release`: succeeded.
-- `flutter build apk --release`: succeeded, approximately 52.5 MB. Uses the repository’s existing debug signing configuration; not a Play Store signing setup.
+- `flutter build apk --release`: succeeded for the earlier chore milestone, approximately 52.5 MB. The Android build was not rerun for milestone 3 because this machine currently has no Android SDK. It uses the repository’s existing debug signing configuration and is not a Play Store signing setup.
 - Presentation: nine slides; package structure, layout geometry, declared Arial fonts, and re-import passed. All slide previews inspected.
 - Video: 1280 × 720, 24 fps, 72 seconds, silent WebM; encoded successfully and a decoded frame was visually checked. This is a captioned slideshow walkthrough using real app captures, not a live device recording.
 - `git diff --check`: no whitespace errors.
 
 ## Coverage
 
-Domain checks cover weekly and daily recurrence, monthly leap-year clamping and restoration, fixed assignment, rotation order, member departures, no remaining eligible members, stale edits, future-date completion rejection, assignment validation, single-occurrence completion, concurrent duplicate requests, restart persistence, and rollback after a storage failure.
+Domain checks cover weekly and daily recurrence, monthly leap-year clamping and restoration, fixed assignment, rotation order, member departures, no remaining eligible members, stale edits, future-date completion rejection, assignment validation, single-occurrence completion, concurrent duplicate requests, restart persistence, rollback after a storage failure, grocery CRUD, claim protection, buyer snapshots, weekly/monthly contribution windows, local store refresh, and undo recalculation.
 
-Widget checks cover dashboard and personal filtering, completion/history, chore creation, empty household setup, read failure/retry, navigation at 360px width and 2× text size, labeled controls, Android tap targets, and text contrast. Existing calendar-date tests also pass.
+Widget checks cover dashboard and personal filtering, completion/history, chore creation, the full add-item → purchase → fairness → undo flow, empty household setup, read failure/retry, navigation at 360px width and 2× text size, labeled controls, Android tap targets, and text contrast. Existing calendar-date tests also pass.
 
 ## Limits of this validation
 
-No physical Android/iPhone device test or iOS archive was performed. The web release was compiled, but the attempted browser preview was unavailable in the automation environment; UI checks and screenshots came from Flutter’s widget-test renderer. No claim of full screen-reader certification, production database durability, multi-tab coordination, or multi-device synchronization is made.
+No physical Android/iPhone device test or iOS archive was performed. The web release compiled and the debug app launched in Chrome; automated UI checks came from Flutter’s widget-test renderer. No claim of full screen-reader certification, production database durability, cross-device synchronization, authentication, or conflict merging is made. Store polling and manual refresh cover app instances using the same browser/device storage only.
 
 The SDK and build caches were staged in the temporary workspace. The local SDK architecture detection needed an environment workaround; application source and CI use the standard pinned Flutter release. GitHub CI independently runs formatting, analysis, tests, web build, and Android build on Linux. Check the PR’s current Actions status for the remote result.
 

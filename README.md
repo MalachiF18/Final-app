@@ -1,6 +1,6 @@
 # Daily Improvement Household
 
-A Flutter school demo for organizing household chores, rotating responsibility, and keeping a completion history.
+A Flutter school demo for organizing household chores, sharing a grocery and supply list, and showing transparent contribution totals.
 
 [![CI](https://github.com/MalachiF18/Final-app/actions/workflows/ci.yml/badge.svg)](https://github.com/MalachiF18/Final-app/actions/workflows/ci.yml)
 
@@ -11,11 +11,17 @@ A Flutter school demo for organizing household chores, rotating responsibility, 
 - One-time, daily, weekly, and monthly schedules.
 - My Responsibilities for the selected demo roommate.
 - Completion history and per-roommate contribution counts.
+- Shared grocery and household-supply list with quantities and categories.
+- Add, edit, remove, claim, release, and purchase shopping items.
+- Buyer snapshots and purchase history that survive later list edits or removal.
+- Weekly and monthly fairness views combining completed chores and purchases.
+- Transparent one-action/one-point rules and safe undo with immediate recalculation.
 - Rotation through eligible active roommates, agreed fixed assignments, and departure handling.
 - Local persistence, loading and error states, rollback on save failure, and duplicate-completion protection.
-- A resettable Maple House demo with three roommates and five chores.
+- Same-browser/device app instances poll the shared local store and can be refreshed manually.
+- A resettable Maple House demo with three roommates, five chores, and starter shopping items.
 
-**This is a local demo.** Data stays in this app/browser on this device using `shared_preferences`. Roommate selection is a demo control, not authentication. There is no Supabase integration, invitation flow, or cross-device synchronization. Clearing browser/app storage removes the data. Preferences are suitable for this demo, not a production database or backup. Use one app instance/browser tab at a time; independent tabs do not coordinate writes. Grocery sharing is outside the chore milestone and is explicitly marked as planned.
+**This is a local demo.** Data stays in this browser/device using `shared_preferences`. Roommate selection is a demo control, not authentication. App instances using the same local store poll for newer saved revisions, but there is no Supabase integration, invitation flow, conflict merge, or cross-device synchronization. Clearing browser/app storage removes the data. Preferences are suitable for this demo, not a production database or backup.
 
 ## Run
 
@@ -48,14 +54,15 @@ flutter build web --release
 flutter build apk --release
 ```
 
-Unit tests cover rotation, fixed assignments, overdue recurrence, leap-year month boundaries, departures, restart persistence, save failure rollback, stale edits, and duplicate/concurrent completion. Widget tests cover navigation, creation, personal filtering, history, empty/error states, large text, and accessibility guidelines. Android release builds currently use debug signing and are classroom artifacts, not store-ready releases.
+Unit tests cover rotation, fixed assignments, overdue recurrence, leap-year month boundaries, departures, restart persistence, save failure rollback, stale edits, duplicate/concurrent completion, grocery CRUD, claims, purchases, refresh between store instances, period totals, and undo recalculation. Widget tests cover navigation, creation, the purchase-to-fairness workflow, history, empty/error states, large text, and accessibility guidelines. Android release builds currently use debug signing and are classroom artifacts, not store-ready releases.
 
 ## Code
 
-- `lib/data/household_store.dart`: local storage, models, and chore transitions.
+- `lib/data/household_store.dart`: versioned local storage, chores, groceries, purchases, contributions, refresh, and undo transitions.
 - `lib/features/chores/`: dashboard, personal view, editor, and history.
+- `lib/features/groceries/`: categorized list, claims, buyer recording, editing, removal, and purchase undo.
 - `lib/features/household/`: roommate selection, membership, demo reset.
-- `lib/features/fairness/`: completion counts from real history.
+- `lib/features/fairness/`: transparent weekly/monthly totals and contribution history.
 - `lib/core/`: navigation, theme, calendar-date labels.
 - `test/`: domain and UI regression tests.
 - `docs/`: demonstration, task evidence, and publishing research.

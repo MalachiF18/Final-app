@@ -39,6 +39,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _index = 0;
   late final HouseholdStore store;
   Timer? _clockRefresh;
+  Timer? _syncRefresh;
   @override
   void initState() {
     super.initState();
@@ -48,11 +49,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _clockRefresh = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });
+    _syncRefresh = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => store.sync(),
+    );
   }
 
   @override
   void dispose() {
     _clockRefresh?.cancel();
+    _syncRefresh?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     if (widget.store == null) store.dispose();
     super.dispose();
@@ -127,7 +133,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                   index: _index,
                   children: [
                     ChoresScreen(store: store),
-                    const GroceriesScreen(),
+                    GroceriesScreen(store: store),
                     FairnessScreen(store: store),
                     HouseholdScreen(store: store),
                   ],

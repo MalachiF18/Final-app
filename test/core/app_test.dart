@@ -70,6 +70,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Take out the trash'), findsOneWidget);
   });
+  testWidgets('grocery workflow records buyer and updates fairness', (
+    tester,
+  ) async {
+    await tester.pumpWidget(HouseholdApp(store: store));
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Groceries');
+    expect(find.text('Milk'), findsOneWidget);
+
+    await tester.tap(find.text('Add item'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'Dish soap');
+    await tester.enterText(fields.at(1), '3');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add item'));
+    await tester.pumpAndSettle();
+    expect(store.groceries.any((g) => g.name == 'Dish soap'), isTrue);
+
+    final dishSoapCard = find.ancestor(
+      of: find.text('Dish soap'),
+      matching: find.byType(Card),
+    );
+    final purchaseButton = find.descendant(
+      of: dishSoapCard,
+      matching: find.widgetWithText(FilledButton, 'Mark purchased'),
+    );
+    await tester.ensureVisible(purchaseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(purchaseButton);
+    await tester.pumpAndSettle();
+    expect(store.purchases.single.itemName, 'Dish soap');
+    expect(store.purchases.single.memberName, 'Alex');
+
+    await tapTab(tester, 'Fairness');
+    expect(store.contributions.length, 1);
+    await tester.scrollUntilVisible(find.text('Dish soap'), 300);
+    expect(find.text('Dish soap'), findsOneWidget);
+    await tester.tap(find.byTooltip('Undo Dish soap'));
+    await tester.pumpAndSettle();
+    expect(store.purchases, isEmpty);
+    expect(
+      find.text('No recorded contributions in this period.'),
+      findsOneWidget,
+    );
+  });
   for (final scale in [1.0, 2.0]) {
     testWidgets('360px screen with text scale $scale has no overflow', (
       tester,
@@ -82,7 +126,8 @@ void main() {
       await tester.pumpAndSettle();
       for (final tab in ['Chores', 'Fairness', 'Household', 'Groceries']) {
         await tapTab(tester, tab);
-        expect(tester.takeException(), isNull);
+        final exception = tester.takeException();
+        expect(exception, isNull, reason: 'Overflow on $tab tab');
       }
     });
   }

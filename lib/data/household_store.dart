@@ -10,6 +10,32 @@ String dateLabel(DateTime value) =>
 
 enum Repeat { once, daily, weekly, monthly }
 
+enum GroceryCategory {
+  produce,
+  pantry,
+  dairy,
+  frozen,
+  household,
+  personal,
+  other,
+}
+
+extension GroceryCategoryLabel on GroceryCategory {
+  String get label => switch (this) {
+    GroceryCategory.produce => 'Produce',
+    GroceryCategory.pantry => 'Pantry',
+    GroceryCategory.dairy => 'Dairy',
+    GroceryCategory.frozen => 'Frozen',
+    GroceryCategory.household => 'Household supplies',
+    GroceryCategory.personal => 'Personal care',
+    GroceryCategory.other => 'Other',
+  };
+}
+
+enum ContributionKind { chore, grocery }
+
+enum ContributionWindow { week, month }
+
 class Member {
   Member(this.id, this.name, {this.active = true});
   final String id;
@@ -102,6 +128,110 @@ class Completion {
   );
 }
 
+class GroceryItem {
+  GroceryItem({
+    required this.id,
+    required this.name,
+    required this.quantity,
+    required this.category,
+    required this.createdAt,
+    required this.updatedAt,
+    this.claimedBy,
+    this.purchasedBy,
+    this.purchasedAt,
+    this.purchaseId,
+  });
+  final String id;
+  String name;
+  int quantity;
+  GroceryCategory category;
+  String? claimedBy;
+  String? purchasedBy;
+  DateTime? purchasedAt;
+  String? purchaseId;
+  final DateTime createdAt;
+  DateTime updatedAt;
+  bool get purchased => purchasedAt != null;
+  Json toJson() => {
+    'id': id,
+    'name': name,
+    'quantity': quantity,
+    'category': category.name,
+    'claimedBy': claimedBy,
+    'purchasedBy': purchasedBy,
+    'purchasedAt': purchasedAt?.toIso8601String(),
+    'purchaseId': purchaseId,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+  factory GroceryItem.fromJson(Json j) => GroceryItem(
+    id: j['id'],
+    name: j['name'],
+    quantity: j['quantity'],
+    category: GroceryCategory.values.byName(j['category']),
+    claimedBy: j['claimedBy'],
+    purchasedBy: j['purchasedBy'],
+    purchasedAt: j['purchasedAt'] == null
+        ? null
+        : DateTime.parse(j['purchasedAt']),
+    purchaseId: j['purchaseId'],
+    createdAt: DateTime.parse(j['createdAt']),
+    updatedAt: DateTime.parse(j['updatedAt']),
+  );
+}
+
+class Purchase {
+  Purchase({
+    required this.id,
+    required this.groceryId,
+    required this.itemName,
+    required this.quantity,
+    required this.category,
+    required this.memberName,
+    required this.memberId,
+    required this.at,
+  });
+  final String id, groceryId, itemName, memberName, memberId;
+  final int quantity;
+  final GroceryCategory category;
+  final DateTime at;
+  Json toJson() => {
+    'id': id,
+    'groceryId': groceryId,
+    'itemName': itemName,
+    'quantity': quantity,
+    'category': category.name,
+    'memberName': memberName,
+    'memberId': memberId,
+    'at': at.toIso8601String(),
+  };
+  factory Purchase.fromJson(Json j) => Purchase(
+    id: j['id'],
+    groceryId: j['groceryId'],
+    itemName: j['itemName'],
+    quantity: j['quantity'],
+    category: GroceryCategory.values.byName(j['category']),
+    memberName: j['memberName'],
+    memberId: j['memberId'],
+    at: DateTime.parse(j['at']),
+  );
+}
+
+class Contribution {
+  const Contribution({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.memberName,
+    required this.memberId,
+    required this.at,
+  });
+  final String id, title, memberName, memberId;
+  final ContributionKind kind;
+  final DateTime at;
+  int get points => 1;
+}
+
 abstract class HouseholdStorage {
   Future<String?> read();
   Future<void> write(String value);
@@ -126,30 +256,66 @@ class HouseholdStore extends ChangeNotifier {
   List<Member> _members = [];
   List<Chore> _chores = [];
   List<Completion> _history = [];
+  List<GroceryItem> _groceries = [];
+  List<Purchase> _purchases = [];
+  int _revision = 0;
   String? currentMemberId;
   String householdName = 'My household';
   bool loading = true, busy = false;
   String? error;
+  DateTime? lastSyncedAt;
   int _serial = 0;
   List<Member> get members => List.unmodifiable(_members);
   List<Member> get activeMembers => _members.where((m) => m.active).toList();
   List<Chore> get chores => List.unmodifiable(_chores);
   List<Completion> get history => List.unmodifiable(_history.reversed);
+  List<GroceryItem> get groceries => List.unmodifiable(_groceries);
+  List<Purchase> get purchases => List.unmodifiable(_purchases.reversed);
+  List<Contribution> get contributions {
+    final result = <Contribution>[
+      for (final h in _history)
+        Contribution(
+          id: 'chore:${h.choreId}:${h.occurrence}',
+          kind: ContributionKind.chore,
+          title: h.title,
+          memberName: h.memberName,
+          memberId: h.memberId,
+          at: h.at,
+        ),
+      for (final p in _purchases)
+        Contribution(
+          id: 'grocery:${p.id}',
+          kind: ContributionKind.grocery,
+          title: p.itemName,
+          memberName: p.memberName,
+          memberId: p.memberId,
+          at: p.at,
+        ),
+    ];
+    result.sort((a, b) => b.at.compareTo(a.at));
+    return List.unmodifiable(result);
+  }
+
   String memberName(String? id) =>
       _members.where((m) => m.id == id).firstOrNull?.name ?? 'Unassigned';
   String _id() => '${clock().microsecondsSinceEpoch}-${_serial++}';
   Json _json() => {
-    'version': 1,
+    'version': 2,
+    'revision': _revision,
     'name': householdName,
     'currentMemberId': currentMemberId,
     'members': _members.map((m) => m.toJson()).toList(),
     'chores': _chores.map((c) => c.toJson()).toList(),
     'history': _history.map((h) => h.toJson()).toList(),
+    'groceries': _groceries.map((g) => g.toJson()).toList(),
+    'purchases': _purchases.map((p) => p.toJson()).toList(),
   };
   void _restore(Json j) {
-    if (j['version'] != 1) {
+    final version = j['version'];
+    if (version != 1 && version != 2) {
       throw const FormatException('Unsupported saved data');
     }
+    _revision = j['revision'] ?? 0;
     householdName = j['name'];
     currentMemberId = j['currentMemberId'];
     _members = (j['members'] as List).map((m) => Member.fromJson(m)).toList();
@@ -157,6 +323,12 @@ class HouseholdStore extends ChangeNotifier {
     _history = (j['history'] as List)
         .map((h) => Completion.fromJson(h))
         .toList();
+    _groceries = version == 1
+        ? []
+        : (j['groceries'] as List).map((g) => GroceryItem.fromJson(g)).toList();
+    _purchases = version == 1
+        ? []
+        : (j['purchases'] as List).map((p) => Purchase.fromJson(p)).toList();
   }
 
   Future<void> load() async {
@@ -166,6 +338,7 @@ class HouseholdStore extends ChangeNotifier {
     try {
       final saved = await storage.read();
       if (saved != null) _restore(jsonDecode(saved));
+      lastSyncedAt = clock();
     } catch (_) {
       error =
           'Could not read your saved household. Retry before making changes.';
@@ -182,7 +355,9 @@ class HouseholdStore extends ChangeNotifier {
     notifyListeners();
     try {
       action();
+      _revision++;
       await storage.write(jsonEncode(_json()));
+      lastSyncedAt = clock();
       return true;
     } on ArgumentError catch (e) {
       _restore(jsonDecode(previous));
@@ -197,6 +372,49 @@ class HouseholdStore extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+  }
+
+  /// Refreshes this app instance from newer data in the same local store.
+  /// This coordinates tabs/windows on one browser profile; it is not a
+  /// cross-device backend.
+  Future<bool> sync() async {
+    if (busy || loading) return false;
+    try {
+      final saved = await storage.read();
+      if (saved == null) return false;
+      final remote = jsonDecode(saved) as Json;
+      final remoteRevision = remote['revision'] ?? 0;
+      if (remoteRevision > _revision) {
+        _restore(remote);
+        notifyListeners();
+      }
+      lastSyncedAt = clock();
+      return true;
+    } catch (_) {
+      error = 'Could not refresh shared changes. Try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  List<Contribution> contributionsFor(
+    ContributionWindow window, {
+    DateTime? anchor,
+  }) {
+    final value = day(anchor ?? clock());
+    final start = switch (window) {
+      ContributionWindow.week => value.subtract(
+        Duration(days: value.weekday - DateTime.monday),
+      ),
+      ContributionWindow.month => DateTime(value.year, value.month),
+    };
+    final end = switch (window) {
+      ContributionWindow.week => start.add(const Duration(days: 7)),
+      ContributionWindow.month => DateTime(start.year, start.month + 1),
+    };
+    return contributions
+        .where((c) => !c.at.isBefore(start) && c.at.isBefore(end))
+        .toList();
   }
 
   Future<bool> addMember(String name) => _change(() {
@@ -272,6 +490,12 @@ class HouseholdStore extends ChangeNotifier {
         c.occurrence++;
       }
     }
+    for (final item in _groceries.where((g) => !g.purchased)) {
+      if (item.claimedBy == id) {
+        item.claimedBy = null;
+        item.updatedAt = clock();
+      }
+    }
     if (currentMemberId == id) currentMemberId = activeMembers.firstOrNull?.id;
   });
   String? _next(List<String> order, String? current) {
@@ -326,6 +550,170 @@ class HouseholdStore extends ChangeNotifier {
     } while (!c.due.isAfter(day(clock())));
     if (!c.fixed) c.assignee = _next(c.eligible, c.assignee);
   });
+
+  bool canUndoCompletion(Completion completion) {
+    final chore = _chores.where((c) => c.id == completion.choreId).firstOrNull;
+    if (chore == null || chore.occurrence != completion.occurrence + 1) {
+      return false;
+    }
+    return !_history.any(
+      (h) =>
+          h.choreId == completion.choreId &&
+          h.occurrence > completion.occurrence,
+    );
+  }
+
+  Future<bool> undoCompletion(Completion completion) => _change(() {
+    if (!canUndoCompletion(completion)) {
+      throw ArgumentError(
+        'This completion cannot be undone after the chore changed or was completed again.',
+      );
+    }
+    final chore = _chores.firstWhere((c) => c.id == completion.choreId);
+    chore.due = completion.due;
+    chore.assignee = completion.memberId;
+    chore.completed = false;
+    chore.occurrence = completion.occurrence;
+    _history.removeWhere(
+      (h) =>
+          h.choreId == completion.choreId &&
+          h.occurrence == completion.occurrence,
+    );
+  });
+
+  Future<bool> saveGrocery({
+    String? id,
+    required String name,
+    required int quantity,
+    required GroceryCategory category,
+  }) => _change(() {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.length > 100) {
+      throw ArgumentError('Enter an item name between 1 and 100 characters.');
+    }
+    if (quantity < 1 || quantity > 99) {
+      throw ArgumentError('Choose a quantity between 1 and 99.');
+    }
+    final now = clock();
+    if (id == null) {
+      _groceries.add(
+        GroceryItem(
+          id: _id(),
+          name: trimmed,
+          quantity: quantity,
+          category: category,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      return;
+    }
+    final item = _groceries.firstWhere((g) => g.id == id);
+    if (item.purchased) {
+      throw ArgumentError('Undo the purchase before editing this item.');
+    }
+    item
+      ..name = trimmed
+      ..quantity = quantity
+      ..category = category
+      ..updatedAt = now;
+  });
+
+  Future<bool> deleteGrocery(String id) => _change(() {
+    if (!_groceries.any((g) => g.id == id)) {
+      throw ArgumentError('That item no longer exists.');
+    }
+    _groceries.removeWhere((g) => g.id == id);
+  });
+
+  Future<bool> claimGrocery(String id) => _change(() {
+    final memberId = currentMemberId;
+    if (memberId == null || !activeMembers.any((m) => m.id == memberId)) {
+      throw ArgumentError('Choose an active roommate before claiming items.');
+    }
+    final item = _groceries.firstWhere((g) => g.id == id);
+    if (item.purchased) throw ArgumentError('That item is already purchased.');
+    if (item.claimedBy != null && item.claimedBy != memberId) {
+      throw ArgumentError(
+        '${memberName(item.claimedBy)} already claimed this item.',
+      );
+    }
+    item
+      ..claimedBy = memberId
+      ..updatedAt = clock();
+  });
+
+  Future<bool> unclaimGrocery(String id) => _change(() {
+    final item = _groceries.firstWhere((g) => g.id == id);
+    if (item.purchased) throw ArgumentError('That item is already purchased.');
+    if (item.claimedBy != currentMemberId) {
+      throw ArgumentError(
+        'Only the roommate who claimed this item can release it.',
+      );
+    }
+    item
+      ..claimedBy = null
+      ..updatedAt = clock();
+  });
+
+  Future<bool> markGroceryPurchased(String id) => _change(() {
+    final memberId = currentMemberId;
+    if (memberId == null || !activeMembers.any((m) => m.id == memberId)) {
+      throw ArgumentError(
+        'Choose an active roommate before recording a purchase.',
+      );
+    }
+    final item = _groceries.firstWhere((g) => g.id == id);
+    if (item.purchased) throw ArgumentError('That item is already purchased.');
+    if (item.claimedBy != null && item.claimedBy != memberId) {
+      throw ArgumentError(
+        '${memberName(item.claimedBy)} claimed this item. Ask them to release it first.',
+      );
+    }
+    final now = clock();
+    final purchaseId = _id();
+    item
+      ..claimedBy = memberId
+      ..purchasedBy = memberId
+      ..purchasedAt = now
+      ..purchaseId = purchaseId
+      ..updatedAt = now;
+    _purchases.add(
+      Purchase(
+        id: purchaseId,
+        groceryId: item.id,
+        itemName: item.name,
+        quantity: item.quantity,
+        category: item.category,
+        memberName: memberName(memberId),
+        memberId: memberId,
+        at: now,
+      ),
+    );
+  });
+
+  bool canUndoPurchase(Purchase purchase) {
+    final item = _groceries
+        .where((g) => g.id == purchase.groceryId)
+        .firstOrNull;
+    return item?.purchaseId == purchase.id;
+  }
+
+  Future<bool> undoPurchase(Purchase purchase) => _change(() {
+    if (!canUndoPurchase(purchase)) {
+      throw ArgumentError(
+        'This purchase cannot be undone because the list item was removed or changed.',
+      );
+    }
+    final item = _groceries.firstWhere((g) => g.id == purchase.groceryId);
+    item
+      ..claimedBy = purchase.memberId
+      ..purchasedBy = null
+      ..purchasedAt = null
+      ..purchaseId = null
+      ..updatedAt = clock();
+    _purchases.removeWhere((p) => p.id == purchase.id);
+  });
   DateTime _advance(Chore c) {
     switch (c.repeat) {
       case Repeat.daily:
@@ -350,6 +738,7 @@ class HouseholdStore extends ChangeNotifier {
     ];
     currentMemberId = 'alex';
     _history = [];
+    _purchases = [];
     final today = day(clock());
     final ids = _members.map((m) => m.id).toList();
     _chores = [
@@ -392,6 +781,32 @@ class HouseholdStore extends ChangeNotifier {
         due: today,
         assignee: 'alex',
         eligible: List.of(ids),
+      ),
+    ];
+    _groceries = [
+      GroceryItem(
+        id: 'demo-milk',
+        name: 'Milk',
+        quantity: 1,
+        category: GroceryCategory.dairy,
+        createdAt: clock(),
+        updatedAt: clock(),
+      ),
+      GroceryItem(
+        id: 'demo-bananas',
+        name: 'Bananas',
+        quantity: 6,
+        category: GroceryCategory.produce,
+        createdAt: clock(),
+        updatedAt: clock(),
+      ),
+      GroceryItem(
+        id: 'demo-towels',
+        name: 'Paper towels',
+        quantity: 2,
+        category: GroceryCategory.household,
+        createdAt: clock(),
+        updatedAt: clock(),
       ),
     ];
   });

@@ -49,7 +49,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Local demo · saved on this device only. Roommate selection is for demonstration, not a secure login. Data is not shared between devices.',
+            'Local demo · saved in this browser/device. Open app instances refresh from the same local store. Roommate selection is for demonstration, not a secure login; cross-device sharing needs a connected household account.',
           ),
           const SizedBox(height: 24),
           if (store.activeMembers.isNotEmpty)
@@ -112,7 +112,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const Text(
-            'Three roommates, five chores, a fixed assignment, and an overdue chore. Demo dates are relative to today.',
+            'Three roommates, five chores, and a starter grocery and household-supply list. Demo dates are relative to today.',
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
@@ -121,7 +121,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
                 : () async {
                     if (await _confirm(
                       'Load demo household?',
-                      'This replaces the locally saved roommates, chores, and completion history on this device.',
+                      'This replaces the locally saved roommates, chores, groceries, purchases, and contribution history on this device.',
                     )) {
                       await store.loadDemo();
                     }

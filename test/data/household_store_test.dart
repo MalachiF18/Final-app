@@ -181,4 +181,102 @@ void main() {
     await store.load();
     expect(store.error, isNull);
   });
+
+  test('grocery items can be added, edited, and removed', () async {
+    expect(
+      await store.saveGrocery(
+        name: 'Dish soap',
+        quantity: 2,
+        category: GroceryCategory.household,
+      ),
+      isTrue,
+    );
+    final item = store.groceries.last;
+    expect(item.name, 'Dish soap');
+    expect(item.quantity, 2);
+    expect(item.category, GroceryCategory.household);
+
+    expect(
+      await store.saveGrocery(
+        id: item.id,
+        name: 'Unscented dish soap',
+        quantity: 3,
+        category: GroceryCategory.household,
+      ),
+      isTrue,
+    );
+    expect(store.groceries.last.name, 'Unscented dish soap');
+    expect(store.groceries.last.quantity, 3);
+    expect(await store.deleteGrocery(item.id), isTrue);
+    expect(store.groceries.any((g) => g.id == item.id), isFalse);
+  });
+
+  test('claims protect shoppers and purchases record the buyer once', () async {
+    expect(await store.claimGrocery('demo-milk'), isTrue);
+    expect(store.groceries.first.claimedBy, 'alex');
+    await store.selectMember('jordan');
+    expect(await store.markGroceryPurchased('demo-milk'), isFalse);
+    expect(store.purchases, isEmpty);
+
+    await store.selectMember('alex');
+    expect(await store.markGroceryPurchased('demo-milk'), isTrue);
+    expect(await store.markGroceryPurchased('demo-milk'), isFalse);
+    expect(store.purchases.single.memberName, 'Alex');
+    expect(store.purchases.single.quantity, 1);
+    expect(store.contributions.single.kind, ContributionKind.grocery);
+  });
+
+  test(
+    'undo purchase removes its contribution and restores needed item',
+    () async {
+      await store.markGroceryPurchased('demo-milk');
+      final purchase = store.purchases.single;
+      expect(await store.undoPurchase(purchase), isTrue);
+      final item = store.groceries.firstWhere((g) => g.id == 'demo-milk');
+      expect(item.purchased, isFalse);
+      expect(item.claimedBy, 'alex');
+      expect(store.purchases, isEmpty);
+      expect(store.contributions, isEmpty);
+    },
+  );
+
+  test('undo chore completion restores schedule and fairness total', () async {
+    await store.complete('demo-trash', 0);
+    final completion = store.history.single;
+    expect(store.contributions.length, 1);
+    expect(await store.undoCompletion(completion), isTrue);
+    expect(store.history, isEmpty);
+    expect(store.contributions, isEmpty);
+    expect(chore('demo-trash').due, DateTime(2026, 11, 4));
+    expect(chore('demo-trash').assignee, 'alex');
+    expect(chore('demo-trash').occurrence, 0);
+  });
+
+  test('weekly and monthly totals use recorded completion dates', () async {
+    await store.complete('demo-trash', 0);
+    await store.markGroceryPurchased('demo-milk');
+    expect(store.contributionsFor(ContributionWindow.week).length, 2);
+    expect(store.contributionsFor(ContributionWindow.month).length, 2);
+    expect(
+      store.contributionsFor(
+        ContributionWindow.month,
+        anchor: DateTime(2026, 12, 1),
+      ),
+      isEmpty,
+    );
+  });
+
+  test('a second app instance refreshes newer grocery changes', () async {
+    final second = HouseholdStore(storage, clock: () => now);
+    await second.load();
+    expect(second.groceries.length, 3);
+    await store.saveGrocery(
+      name: 'Laundry detergent',
+      quantity: 1,
+      category: GroceryCategory.household,
+    );
+    expect(second.groceries.any((g) => g.name == 'Laundry detergent'), isFalse);
+    expect(await second.sync(), isTrue);
+    expect(second.groceries.any((g) => g.name == 'Laundry detergent'), isTrue);
+  });
 }

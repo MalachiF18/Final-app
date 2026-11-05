@@ -99,6 +99,7 @@ class _ChoresScreenState extends State<ChoresScreen> {
       floatingActionButton: store.activeMembers.isEmpty
           ? null
           : FloatingActionButton.extended(
+              heroTag: 'add-chore',
               onPressed: store.busy ? null : () => _edit(),
               icon: const Icon(Icons.add),
               label: const Text('Add chore'),

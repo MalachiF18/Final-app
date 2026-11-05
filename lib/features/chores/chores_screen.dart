@@ -82,7 +82,7 @@ class _ChoresScreenState extends State<ChoresScreen> {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: Text(_mine ? 'My Responsibilities' : 'Chores'),
+        title: Text(_mine ? 'MY RESPONSIBILITIES' : 'CHORES'),
         actions: [
           IconButton(
             tooltip: 'Completion history',

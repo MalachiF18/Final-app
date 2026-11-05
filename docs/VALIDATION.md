@@ -4,9 +4,9 @@ Milestone 3 checked November 5, 2026 using Flutter 3.47.7 / Dart 3.13.5. Earlier
 
 ## Passed locally
 
-- `dart format --output=none --set-exit-if-changed .`: 14 Dart files, no changes.
+- `dart format --output=none --set-exit-if-changed .`: 18 Dart files, no changes.
 - `flutter analyze`: no issues.
-- `flutter test`: 37 passed. One optional capture test is skipped unless its output/font environment variables are provided.
+- `flutter test`: 40 passed. One optional capture test is skipped unless its output/font environment variables are provided.
 - Optional capture test with real fonts: passed, produced seven screenshots of the running widget tree and verified the demonstrated rotation.
 - `flutter build web --release`: succeeded.
 - `flutter build apk --release`: succeeded for the earlier chore milestone, approximately 52.5 MB. The Android build was not rerun for milestone 3 because this machine currently has no Android SDK. It uses the repository’s existing debug signing configuration and is not a Play Store signing setup.
@@ -16,9 +16,9 @@ Milestone 3 checked November 5, 2026 using Flutter 3.47.7 / Dart 3.13.5. Earlier
 
 ## Coverage
 
-Domain checks cover weekly and daily recurrence, monthly leap-year clamping and restoration, fixed assignment, rotation order, member departures, no remaining eligible members, stale edits, future-date completion rejection, assignment validation, single-occurrence completion, concurrent duplicate requests, restart persistence, rollback after a storage failure, grocery CRUD, claim protection, buyer snapshots, weekly/monthly contribution windows, local store refresh, and undo recalculation.
+Domain checks cover weekly and daily recurrence, monthly leap-year clamping and restoration, fixed assignment, rotation order, member departures, no remaining eligible members, stale edits, future-date completion rejection, assignment validation, single-occurrence completion, concurrent duplicate requests, restart persistence, rollback after a storage failure, grocery CRUD, claim protection, buyer snapshots, reminders, local household setup, weekly/monthly contribution windows, local store refresh, and undo recalculation.
 
-Widget checks cover dashboard and personal filtering, completion/history, chore creation, the full add-item → purchase → fairness → undo flow, empty household setup, read failure/retry, navigation at 360px width and 2× text size, labeled controls, Android tap targets, and text contrast. Existing calendar-date tests also pass.
+Widget checks cover local onboarding, home-first feature navigation, dashboard and personal filtering, completion/history, chore creation, reminder creation/completion, the full add-item → purchase → fairness → undo flow, read failure/retry, navigation at 360px width and 2× text size, labeled controls, Android tap targets, and text contrast. Existing calendar-date tests also pass. The running Chrome home dashboard was visually inspected after hot restart.
 
 ## Limits of this validation
 

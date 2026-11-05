@@ -217,6 +217,35 @@ class Purchase {
   );
 }
 
+class Reminder {
+  Reminder({
+    required this.id,
+    required this.title,
+    required this.due,
+    required this.createdBy,
+    this.completed = false,
+  });
+  final String id;
+  String title;
+  DateTime due;
+  String? createdBy;
+  bool completed;
+  Json toJson() => {
+    'id': id,
+    'title': title,
+    'due': due.toIso8601String(),
+    'createdBy': createdBy,
+    'completed': completed,
+  };
+  factory Reminder.fromJson(Json j) => Reminder(
+    id: j['id'],
+    title: j['title'],
+    due: DateTime.parse(j['due']),
+    createdBy: j['createdBy'],
+    completed: j['completed'] ?? false,
+  );
+}
+
 class Contribution {
   const Contribution({
     required this.id,
@@ -258,12 +287,14 @@ class HouseholdStore extends ChangeNotifier {
   List<Completion> _history = [];
   List<GroceryItem> _groceries = [];
   List<Purchase> _purchases = [];
+  List<Reminder> _reminders = [];
   int _revision = 0;
   String? currentMemberId;
   String householdName = 'My household';
   bool loading = true, busy = false;
   String? error;
   DateTime? lastSyncedAt;
+  bool remindersEnabled = true;
   int _serial = 0;
   List<Member> get members => List.unmodifiable(_members);
   List<Member> get activeMembers => _members.where((m) => m.active).toList();
@@ -271,6 +302,7 @@ class HouseholdStore extends ChangeNotifier {
   List<Completion> get history => List.unmodifiable(_history.reversed);
   List<GroceryItem> get groceries => List.unmodifiable(_groceries);
   List<Purchase> get purchases => List.unmodifiable(_purchases.reversed);
+  List<Reminder> get reminders => List.unmodifiable(_reminders);
   List<Contribution> get contributions {
     final result = <Contribution>[
       for (final h in _history)
@@ -300,7 +332,7 @@ class HouseholdStore extends ChangeNotifier {
       _members.where((m) => m.id == id).firstOrNull?.name ?? 'Unassigned';
   String _id() => '${clock().microsecondsSinceEpoch}-${_serial++}';
   Json _json() => {
-    'version': 2,
+    'version': 3,
     'revision': _revision,
     'name': householdName,
     'currentMemberId': currentMemberId,
@@ -309,10 +341,12 @@ class HouseholdStore extends ChangeNotifier {
     'history': _history.map((h) => h.toJson()).toList(),
     'groceries': _groceries.map((g) => g.toJson()).toList(),
     'purchases': _purchases.map((p) => p.toJson()).toList(),
+    'reminders': _reminders.map((r) => r.toJson()).toList(),
+    'remindersEnabled': remindersEnabled,
   };
   void _restore(Json j) {
     final version = j['version'];
-    if (version != 1 && version != 2) {
+    if (version != 1 && version != 2 && version != 3) {
       throw const FormatException('Unsupported saved data');
     }
     _revision = j['revision'] ?? 0;
@@ -329,6 +363,10 @@ class HouseholdStore extends ChangeNotifier {
     _purchases = version == 1
         ? []
         : (j['purchases'] as List).map((p) => Purchase.fromJson(p)).toList();
+    _reminders = version == 3
+        ? (j['reminders'] as List).map((r) => Reminder.fromJson(r)).toList()
+        : [];
+    remindersEnabled = version == 3 ? j['remindersEnabled'] ?? true : true;
   }
 
   Future<void> load() async {
@@ -430,6 +468,42 @@ class HouseholdStore extends ChangeNotifier {
     final member = Member(_id(), trimmed);
     _members.add(member);
     currentMemberId ??= member.id;
+  });
+
+  Future<bool> createHousehold(String memberName, String name) => _change(() {
+    final trimmedMember = memberName.trim();
+    final trimmedName = name.trim();
+    if (trimmedMember.isEmpty || trimmedMember.length > 60) {
+      throw ArgumentError('Enter your name between 1 and 60 characters.');
+    }
+    if (trimmedName.isEmpty || trimmedName.length > 80) {
+      throw ArgumentError(
+        'Enter a household name between 1 and 80 characters.',
+      );
+    }
+    final member = Member(_id(), trimmedMember);
+    householdName = trimmedName;
+    _members = [member];
+    currentMemberId = member.id;
+    _chores = [];
+    _history = [];
+    _groceries = [];
+    _purchases = [];
+    _reminders = [];
+  });
+
+  Future<bool> renameHousehold(String name) => _change(() {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.length > 80) {
+      throw ArgumentError(
+        'Enter a household name between 1 and 80 characters.',
+      );
+    }
+    householdName = trimmed;
+  });
+
+  Future<bool> setRemindersEnabled(bool enabled) => _change(() {
+    remindersEnabled = enabled;
   });
   Future<bool> selectMember(String id) => _change(() {
     if (!activeMembers.any((m) => m.id == id)) {
@@ -714,6 +788,44 @@ class HouseholdStore extends ChangeNotifier {
       ..updatedAt = clock();
     _purchases.removeWhere((p) => p.id == purchase.id);
   });
+
+  Future<bool> saveReminder({
+    String? id,
+    required String title,
+    required DateTime due,
+  }) => _change(() {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty || trimmed.length > 100) {
+      throw ArgumentError('Enter a reminder between 1 and 100 characters.');
+    }
+    if (id == null) {
+      _reminders.add(
+        Reminder(
+          id: _id(),
+          title: trimmed,
+          due: due,
+          createdBy: currentMemberId,
+        ),
+      );
+      return;
+    }
+    final reminder = _reminders.firstWhere((r) => r.id == id);
+    reminder
+      ..title = trimmed
+      ..due = due;
+  });
+
+  Future<bool> toggleReminder(String id) => _change(() {
+    final reminder = _reminders.firstWhere((r) => r.id == id);
+    reminder.completed = !reminder.completed;
+  });
+
+  Future<bool> deleteReminder(String id) => _change(() {
+    if (!_reminders.any((r) => r.id == id)) {
+      throw ArgumentError('That reminder no longer exists.');
+    }
+    _reminders.removeWhere((r) => r.id == id);
+  });
   DateTime _advance(Chore c) {
     switch (c.repeat) {
       case Repeat.daily:
@@ -739,6 +851,7 @@ class HouseholdStore extends ChangeNotifier {
     currentMemberId = 'alex';
     _history = [];
     _purchases = [];
+    remindersEnabled = true;
     final today = day(clock());
     final ids = _members.map((m) => m.id).toList();
     _chores = [
@@ -807,6 +920,20 @@ class HouseholdStore extends ChangeNotifier {
         category: GroceryCategory.household,
         createdAt: clock(),
         updatedAt: clock(),
+      ),
+    ];
+    _reminders = [
+      Reminder(
+        id: 'demo-reminder-trash',
+        title: 'Take out the trash',
+        due: DateTime(today.year, today.month, today.day, 18),
+        createdBy: 'alex',
+      ),
+      Reminder(
+        id: 'demo-reminder-grocery',
+        title: 'Grocery run',
+        due: DateTime(today.year, today.month, today.day + 2, 10),
+        createdBy: 'alex',
       ),
     ];
   });

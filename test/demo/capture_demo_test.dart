@@ -64,17 +64,13 @@ void main() {
       });
     }
 
-    Future<void> tab(String label) async {
-      await tester.tap(
-        find.descendant(
-          of: find.byType(NavigationBar),
-          matching: find.text(label),
-        ),
-      );
+    Future<void> openTile(String label) async {
+      await tester.tap(find.text(label));
       await tester.pumpAndSettle();
     }
 
     await capture('01-dashboard');
+    await openTile('Chores');
     await tester.tap(find.text('My Responsibilities'));
     await tester.pumpAndSettle();
     await capture('02-my-responsibilities');
@@ -91,11 +87,18 @@ void main() {
     await capture('04-history');
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tab('Fairness');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openTile('Progress');
     await capture('05-fairness');
-    await tab('Household');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
     await capture('06-household');
-    await tab('Chores');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openTile('Chores');
     await tester.tap(find.text('Add chore'));
     await tester.pumpAndSettle();
     await tester.enterText(

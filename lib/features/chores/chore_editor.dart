@@ -70,7 +70,7 @@ class _ChoreEditorState extends State<ChoreEditor> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.chore == null ? 'New chore' : 'Edit chore'),
+      title: Text(widget.chore == null ? 'ADD CHORE' : 'EDIT CHORE'),
     ),
     bottomNavigationBar: SafeArea(
       child: Padding(

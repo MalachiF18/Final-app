@@ -39,7 +39,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
   Widget build(BuildContext context) {
     final store = widget.store;
     return Scaffold(
-      appBar: AppBar(title: const Text('Household')),
+      appBar: AppBar(title: const Text('MEMBERS')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

@@ -279,4 +279,40 @@ void main() {
     expect(await second.sync(), isTrue);
     expect(second.groceries.any((g) => g.name == 'Laundry detergent'), isTrue);
   });
+
+  test('reminders can be created, edited, completed, and removed', () async {
+    final due = DateTime(2026, 11, 5, 18, 30);
+    expect(await store.saveReminder(title: 'Pay water bill', due: due), isTrue);
+    final reminder = store.reminders.last;
+    expect(reminder.createdBy, 'alex');
+    expect(reminder.due, due);
+    expect(
+      await store.saveReminder(
+        id: reminder.id,
+        title: 'Pay utility bill',
+        due: due.add(const Duration(hours: 1)),
+      ),
+      isTrue,
+    );
+    expect(store.reminders.last.title, 'Pay utility bill');
+    expect(await store.toggleReminder(reminder.id), isTrue);
+    expect(store.reminders.last.completed, isTrue);
+    expect(await store.deleteReminder(reminder.id), isTrue);
+    expect(store.reminders.any((r) => r.id == reminder.id), isFalse);
+  });
+
+  test('household profile, name, and reminder settings persist', () async {
+    final freshStorage = MemoryStorage();
+    final fresh = HouseholdStore(freshStorage, clock: () => now);
+    await fresh.load();
+    expect(await fresh.createHousehold('Taylor', 'Oak House'), isTrue);
+    expect(await fresh.setRemindersEnabled(false), isTrue);
+    expect(await fresh.renameHousehold('Oak Street House'), isTrue);
+
+    final reopened = HouseholdStore(freshStorage, clock: () => now);
+    await reopened.load();
+    expect(reopened.householdName, 'Oak Street House');
+    expect(reopened.activeMembers.single.name, 'Taylor');
+    expect(reopened.remindersEnabled, isFalse);
+  });
 }

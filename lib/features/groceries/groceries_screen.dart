@@ -72,7 +72,7 @@ class _GroceriesScreenState extends State<GroceriesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Shopping list'),
+        title: const Text('GROCERIES'),
         actions: [
           IconButton(
             tooltip: 'Refresh shared list',

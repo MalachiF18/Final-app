@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:household_app/data/household_store.dart';
 import 'package:household_app/core/theme.dart';
-import 'package:household_app/features/chores/chores_screen.dart';
-import 'package:household_app/features/fairness/fairness_screen.dart';
-import 'package:household_app/features/groceries/groceries_screen.dart';
-import 'package:household_app/features/household/household_screen.dart';
+import 'package:household_app/data/household_store.dart';
+import 'package:household_app/features/home/home_screen.dart';
+import 'package:household_app/features/onboarding/onboarding_screen.dart';
 
-/// App root: MaterialApp plus the four-tab bottom-nav shell.
+/// App root: MaterialApp plus the local household navigation shell.
 class HouseholdApp extends StatelessWidget {
   const HouseholdApp({super.key, this.store});
   final HouseholdStore? store;
@@ -26,7 +24,7 @@ class HouseholdApp extends StatelessWidget {
   }
 }
 
-/// Holds the selected tab; each tab screen owns its own Scaffold and AppBar.
+/// Loads the shared store, then shows onboarding or the home dashboard.
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.store});
   final HouseholdStore? store;
@@ -36,7 +34,6 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
-  int _index = 0;
   late final HouseholdStore store;
   Timer? _clockRefresh;
   Timer? _syncRefresh;
@@ -102,71 +99,22 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
             ),
           );
         }
-        return Scaffold(
-          // IndexedStack keeps every tab mounted so each keeps its state
-          // (scroll position, form input) when you switch away and back.
-          body: Column(
-            children: [
-              if (store.busy)
-                const LinearProgressIndicator(
-                  semanticsLabel: 'Saving household',
-                ),
-              if (store.error != null)
-                MaterialBanner(
-                  content: Text(store.error!),
-                  actions: [
-                    TextButton(
-                      onPressed: () => ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Try your action again. Your previous data is saved.',
-                              ),
-                            ),
-                          ),
-                      child: const Text('Help'),
-                    ),
-                  ],
-                ),
-              Expanded(
-                child: IndexedStack(
-                  index: _index,
-                  children: [
-                    ChoresScreen(store: store),
-                    GroceriesScreen(store: store),
-                    FairnessScreen(store: store),
-                    HouseholdScreen(store: store),
-                  ],
+        final screen = store.activeMembers.isEmpty
+            ? OnboardingScreen(store: store)
+            : HomeScreen(store: store);
+        return Stack(
+          children: [
+            screen,
+            if (store.busy)
+              const SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: LinearProgressIndicator(
+                    semanticsLabel: 'Saving household',
+                  ),
                 ),
               ),
-            ],
-          ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.checklist_outlined),
-                selectedIcon: Icon(Icons.checklist),
-                label: 'Chores',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.shopping_cart_outlined),
-                selectedIcon: Icon(Icons.shopping_cart),
-                label: 'Groceries',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.balance_outlined),
-                selectedIcon: Icon(Icons.balance),
-                label: 'Fairness',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Household',
-              ),
-            ],
-          ),
+          ],
         );
       },
     );

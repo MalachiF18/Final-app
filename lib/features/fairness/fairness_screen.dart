@@ -25,7 +25,7 @@ class _FairnessScreenState extends State<FairnessScreen> {
         : DateTime(start.year, start.month + 1, 0);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Fairness')),
+      appBar: AppBar(title: const Text('PROGRESS')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
